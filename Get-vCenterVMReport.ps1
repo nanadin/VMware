@@ -11,8 +11,8 @@
 #>
 
 # --- Configuration Variables ---
-$vCenterServer = "vcenter.yourdomain.local" # Change to your vCenter FQDN or IP
-$ExportPath    = "C:\Scripts\Excel-Macros\vCenter_VM_Report.csv"
+$vCenterServer = "vc.551aee9c52c94651bf961c.westus.avs.azure.com" # Change to your vCenter FQDN or IP
+$ExportPath    = "C:\GitHub\Scripts\vCenter_VM_Report.csv"
 
 # --- 1. Ensure PowerCLI Module is Loaded ---
 if (-not (Get-Module -Name VMware.PowerCLI -ListAvailable)) {
