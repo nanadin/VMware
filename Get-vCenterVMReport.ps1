@@ -20,6 +20,15 @@ if (-not (Get-Module -Name VMware.PowerCLI -ListAvailable)) {
     exit
 }
 
+# --- 1b. Apply PowerCLI Configurations ---
+Write-Host "Configuring PowerCLI settings..." -ForegroundColor Cyan
+
+# Opt into CEIP silently
+Set-PowerCLIConfiguration -Scope User -ParticipateInCEIP $true -Confirm:$false | Out-Null
+
+# Suppress invalid certificate warnings (Optional, but common in labs)
+Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false | Out-Null
+
 # --- 2. Connect to vCenter ---
 Write-Host "Connecting to vCenter: $vCenterServer..." -ForegroundColor Cyan
 try {
