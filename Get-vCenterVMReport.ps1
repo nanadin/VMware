@@ -25,6 +25,8 @@ Write-Host "Configuring PowerCLI settings..." -ForegroundColor Cyan
 
 # Opt into CEIP silently
 Set-PowerCLIConfiguration -Scope User -ParticipateInCEIP $true -Confirm:$false | Out-Null
+# Disable Popups
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PowerShell\1\ShellIds" -Name "ConsolePrompting" -Value $true
 
 # Suppress invalid certificate warnings (Optional, but common in labs)
 Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false | Out-Null
@@ -54,6 +56,8 @@ $VMReport = Get-VM | Select-Object Name,
 
 # Exporting data to CSV
 if ($VMReport) {
+   # NEW: Print the report to the terminal in an auto-sized table
+    $VMReport | Format-Table -AutoSize
     $VMReport | Export-Csv -Path $ExportPath -NoTypeInformation -Force
     Write-Host "Success! Report exported to: $ExportPath" -ForegroundColor Green
 } else {
