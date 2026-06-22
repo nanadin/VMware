@@ -1,11 +1,11 @@
 # --- Configuration ---
-# Target the Linux VM directly instead of vCenter
-$VMHostOrIP  = "10.140.223.50" # Replace with the VM's actual IP or FQDN
-
-# Guest OS Credentials (Must have sudo rights)
+$VMHostOrIP  = "10.140.223.50" 
 $GuestUser     = "rmassey"
-$GuestPassword = "VMware1!23456" | ConvertTo-SecureString -AsPlainText -Force
-$GuestCreds    = New-Object System.Management.Automation.PSCredential($GuestUser, $GuestPassword)
+$PlainTextPassword = "VMware1!23456" 
+
+# Build standard PSCredential object safely
+$SecurePassword = $PlainTextPassword | ConvertTo-SecureString -AsPlainText -Force
+$GuestCreds    = New-Object System.Management.Automation.PSCredential($GuestUser, $SecurePassword)
 
 # --- Prerequisites Check ---
 if (-not (Get-Module -ListAvailable Posh-SSH)) {
@@ -14,10 +14,6 @@ if (-not (Get-Module -ListAvailable Posh-SSH)) {
 }
 
 # --- The Bash Script to Inject ---
-# NOTE: Because we are running non-interactively via SSH, we pass the password 
-# to 'sudo -S' so the sudo commands don't hang waiting for a password prompt.
-$PlainTextPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($GuestPassword))
-
 $BashScript = @"
 echo '$PlainTextPassword' | sudo -S sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf
 echo '$PlainTextPassword' | sudo -S mkdir -p /etc/dconf/profile
@@ -36,8 +32,8 @@ echo '$PlainTextPassword' | sudo -S systemctl restart gdm3
 Write-Host "Connecting via SSH and executing configuration on $VMHostOrIP..." -ForegroundColor Cyan
 
 try {
-    # Establish SSH Session
-    $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -AcceptKey $true
+    # Fixed parameter: Using -KeyAccept as a pure switch flag to prevent the positional error
+    $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -KeyAccept
     
     # Run the entire Bash block
     $Result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $BashScript
