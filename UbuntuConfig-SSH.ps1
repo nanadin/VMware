@@ -17,35 +17,41 @@ if (-not (Get-Module -ListAvailable Posh-SSH)) {
 # The `-replace "`r", ""` at the very end strips out invisible Windows line endings 
 # so that the Linux Bash interpreter doesn't throw syntax errors.
 $BashScript = @"
-# 1. Disable Wayland
+echo ">>> Starting Ubuntu GDM3 Configuration Payload..."
+
+echo ">>> Step 1: Disabling Wayland..."
 echo '$PlainTextPassword' | sudo -S sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf
 
-# 2. Setup GDM Profile
+echo ">>> Step 2: Setting up GDM Profile..."
 echo '$PlainTextPassword' | sudo -S mkdir -p /etc/dconf/profile
 echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > /tmp/gdm-profile
 echo '$PlainTextPassword' | sudo -S mv /tmp/gdm-profile /etc/dconf/profile/gdm
 
-# 3. Setup Prevent Blanking Policy
+echo ">>> Step 3: Setting Prevent Blanking Policy..."
 echo '$PlainTextPassword' | sudo -S mkdir -p /etc/dconf/db/gdm.d
 echo -e "[org/gnome/desktop/session]\nidle-delay=uint32 0\n\n[org/gnome/desktop/screensaver]\nlock-enabled=false" > /tmp/01-prevent-blanking
 echo '$PlainTextPassword' | sudo -S mv /tmp/01-prevent-blanking /etc/dconf/db/gdm.d/01-prevent-blanking
 
-# 4. Update dconf database
+echo ">>> Step 4: Updating dconf database..."
 echo '$PlainTextPassword' | sudo -S dconf update
 
-# 5. Artificially launch a DBUS session to apply gsettings over SSH
-# Check if dbus-x11 is installed, and install it silently if missing
+echo ">>> Step 5: Artificially launching DBUS session..."
 if ! command -v dbus-launch &> /dev/null; then
-    echo '$PlainTextPassword' | sudo -S apt-get update -qq
-    echo '$PlainTextPassword' | sudo -S DEBIAN_FRONTEND=noninteractive apt-get install -y dbus-x11 -qq
+    echo ">>>   [Notice] dbus-x11 is missing. Installing it now from apt repositories..."
+    echo '$PlainTextPassword' | sudo -S apt-get update
+    echo '$PlainTextPassword' | sudo -S DEBIAN_FRONTEND=noninteractive apt-get install -y dbus-x11
+else
+    echo ">>>   [Notice] dbus-x11 is already installed. Skipping apt-get."
 fi
 
 export XDG_RUNTIME_DIR="/run/user/`$(id -u)"
 dbus-launch gsettings set org.gnome.desktop.session idle-delay 0
 dbus-launch gsettings set org.gnome.desktop.screensaver lock-enabled false
 
-# 6. Restart GDM3
+echo ">>> Step 6: Restarting GDM3 Service..."
 echo '$PlainTextPassword' | sudo -S systemctl restart gdm3
+
+echo ">>> Payload execution complete!"
 "@ -replace "`r", ""
 
 # --- Execute via SSH ---
@@ -56,11 +62,14 @@ try {
     $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -Force
     
     # Run the sanitized Bash script block with a 5-minute (300 seconds) timeout
+    Write-Host "Executing Bash payload (waiting up to 5 minutes for apt-get)..." -ForegroundColor Yellow
     $Result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $BashScript -Timeout 300
     
     # Print execution outputs to the console
+    Write-Host "`n--- UBUNTU EXECUTION LOG ---" -ForegroundColor Cyan
     if ($Result.Output) { Write-Host $Result.Output -ForegroundColor Gray }
     if ($Result.Error) { Write-Warning $Result.Error }
+    Write-Host "----------------------------`n" -ForegroundColor Cyan
 
     Write-Host "Done! GDM3 has been reconfigured and restarted via SSH." -ForegroundColor Green
 }
