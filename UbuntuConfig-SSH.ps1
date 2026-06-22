@@ -1,6 +1,6 @@
 # --- Configuration ---
-$VMHostOrIP  = "10.140.223.50" 
-$GuestUser     = "rmassey"
+$VMHostOrIP        = "10.140.223.50" 
+$GuestUser         = "rmassey"
 $PlainTextPassword = "VMware1!23456" 
 
 # Build standard PSCredential object safely
@@ -14,6 +14,8 @@ if (-not (Get-Module -ListAvailable Posh-SSH)) {
 }
 
 # --- The Bash Script to Inject ---
+# The `-replace "`r", ""` at the very end strips out invisible Windows line endings 
+# so that the Linux Bash interpreter doesn't throw syntax errors.
 $BashScript = @"
 echo '$PlainTextPassword' | sudo -S sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf
 echo '$PlainTextPassword' | sudo -S mkdir -p /etc/dconf/profile
@@ -26,19 +28,19 @@ gsettings set org.gnome.desktop.session idle-delay 0
 gsettings set org.gnome.desktop.screensaver lock-enabled false
 
 echo '$PlainTextPassword' | sudo -S systemctl restart gdm3
-"@
+"@ -replace "`r", ""
 
 # --- Execute via SSH ---
 Write-Host "Connecting via SSH and executing configuration on $VMHostOrIP..." -ForegroundColor Cyan
 
 try {
-    # Swapped version-dependent parameters for the universal -Force switch
+    # Open the SSH session using the universal -Force switch
     $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -Force
     
-    # Run the entire Bash block
+    # Run the sanitized Bash script block
     $Result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $BashScript
     
-    # Print outputs
+    # Print execution outputs to the console
     if ($Result.Output) { Write-Host $Result.Output -ForegroundColor Gray }
     if ($Result.Error) { Write-Warning $Result.Error }
 
@@ -48,6 +50,6 @@ catch {
     Write-Error "SSH Execution failed: $_"
 }
 finally {
-    # Clean up the SSH session
+    # Clean up and close the SSH session
     if ($Session) { Remove-SSHSession -SessionId $Session.SessionId }
 }
