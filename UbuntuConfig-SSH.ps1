@@ -32,8 +32,8 @@ echo '$PlainTextPassword' | sudo -S systemctl restart gdm3
 Write-Host "Connecting via SSH and executing configuration on $VMHostOrIP..." -ForegroundColor Cyan
 
 try {
-    # Fixed parameter: Using -KeyAccept as a pure switch flag to prevent the positional error
-    $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -KeyAccept
+    # Swapped version-dependent parameters for the universal -Force switch
+    $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -Force
     
     # Run the entire Bash block
     $Result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $BashScript
