@@ -33,10 +33,10 @@ echo '$PlainTextPassword' | sudo -S mv /tmp/01-prevent-blanking /etc/dconf/db/gd
 # 4. Update dconf database
 echo '$PlainTextPassword' | sudo -S dconf update
 
-# 5. Export DBUS so gsettings works over SSH, then apply user settings
-export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/`id -u`/bus"
-gsettings set org.gnome.desktop.session idle-delay 0
-gsettings set org.gnome.desktop.screensaver lock-enabled false
+# 5. Artificially launch a DBUS session to apply gsettings over SSH
+export XDG_RUNTIME_DIR="/run/user/`id -u`"
+dbus-launch gsettings set org.gnome.desktop.session idle-delay 0
+dbus-launch gsettings set org.gnome.desktop.screensaver lock-enabled false
 
 # 6. Restart GDM3
 echo '$PlainTextPassword' | sudo -S systemctl restart gdm3
