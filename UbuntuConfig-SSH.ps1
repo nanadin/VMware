@@ -5,7 +5,7 @@ $PlainTextPassword = "VMware1!23456"
 
 # Build standard PSCredential object safely
 $SecurePassword = $PlainTextPassword | ConvertTo-SecureString -AsPlainText -Force
-$GuestCreds    = New-Object System.Management.Automation.PSCredential($GuestUser, $SecurePassword)
+$GuestCreds     = New-Object System.Management.Automation.PSCredential($GuestUser, $SecurePassword)
 
 # --- Prerequisites Check ---
 if (-not (Get-Module -ListAvailable Posh-SSH)) {
@@ -14,19 +14,31 @@ if (-not (Get-Module -ListAvailable Posh-SSH)) {
 }
 
 # --- The Bash Script to Inject ---
-# The `-replace "`r", ""` at the very end strips out invisible Windows line endings 
+# The `-replace "\`r", ""` at the very end strips out invisible Windows line endings 
 # so that the Linux Bash interpreter doesn't throw syntax errors.
 $BashScript = @"
+# 1. Disable Wayland
 echo '$PlainTextPassword' | sudo -S sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf
+
+# 2. Setup GDM Profile
 echo '$PlainTextPassword' | sudo -S mkdir -p /etc/dconf/profile
-echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" | echo '$PlainTextPassword' | sudo -S tee /etc/dconf/profile/gdm > /dev/null
+echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > /tmp/gdm-profile
+echo '$PlainTextPassword' | sudo -S mv /tmp/gdm-profile /etc/dconf/profile/gdm
+
+# 3. Setup Prevent Blanking Policy
 echo '$PlainTextPassword' | sudo -S mkdir -p /etc/dconf/db/gdm.d
-echo -e "[org/gnome/desktop/session]\nidle-delay=uint32 0\n\n[org/gnome/desktop/screensaver]\nlock-enabled=false" | echo '$PlainTextPassword' | sudo -S tee /etc/dconf/db/gdm.d/01-prevent-blanking > /dev/null
+echo -e "[org/gnome/desktop/session]\nidle-delay=uint32 0\n\n[org/gnome/desktop/screensaver]\nlock-enabled=false" > /tmp/01-prevent-blanking
+echo '$PlainTextPassword' | sudo -S mv /tmp/01-prevent-blanking /etc/dconf/db/gdm.d/01-prevent-blanking
+
+# 4. Update dconf database
 echo '$PlainTextPassword' | sudo -S dconf update
 
+# 5. Export DBUS so gsettings works over SSH, then apply user settings
+export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/`id -u`/bus"
 gsettings set org.gnome.desktop.session idle-delay 0
 gsettings set org.gnome.desktop.screensaver lock-enabled false
 
+# 6. Restart GDM3
 echo '$PlainTextPassword' | sudo -S systemctl restart gdm3
 "@ -replace "`r", ""
 
