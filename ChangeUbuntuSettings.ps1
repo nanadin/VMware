@@ -4,7 +4,7 @@ $VMName        = "rmlinux-01"
 
 # Guest OS Credentials (Must have sudo rights)
 $GuestUser     = "rmassey"
-$GuestPassword = "VMware1!123456" | ConvertTo-SecureString -AsPlainText -Force
+$GuestPassword = "VMware1!23456" | ConvertTo-SecureString -AsPlainText -Force
 $GuestCreds    = New-Object System.Management.Automation.PSCredential($GuestUser, $GuestPassword)
 
 # --- Connect to vCenter ---
