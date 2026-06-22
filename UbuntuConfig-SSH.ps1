@@ -1,6 +1,6 @@
 # --- Configuration ---
 # Target the Linux VM directly instead of vCenter
-$VMHostOrIP  = "rmlinux-01.local" # Replace with the VM's actual IP or FQDN
+$VMHostOrIP  = "10.140.223.50" # Replace with the VM's actual IP or FQDN
 
 # Guest OS Credentials (Must have sudo rights)
 $GuestUser     = "rmassey"
