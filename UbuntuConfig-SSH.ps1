@@ -65,7 +65,7 @@ try {
     Write-Host "Done! GDM3 has been reconfigured and restarted via SSH." -ForegroundColor Green
 }
 catch {
-    Write-Error "SSH Execution failed: `$_"
+    Write-Error "SSH Execution failed: $_"
 }
 finally {
     # Clean up and close the SSH session
