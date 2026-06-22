@@ -34,7 +34,13 @@ echo '$PlainTextPassword' | sudo -S mv /tmp/01-prevent-blanking /etc/dconf/db/gd
 echo '$PlainTextPassword' | sudo -S dconf update
 
 # 5. Artificially launch a DBUS session to apply gsettings over SSH
-export XDG_RUNTIME_DIR="/run/user/`id -u`"
+# Check if dbus-x11 is installed, and install it silently if missing
+if ! command -v dbus-launch &> /dev/null; then
+    echo '$PlainTextPassword' | sudo -S apt-get update -qq
+    echo '$PlainTextPassword' | sudo -S DEBIAN_FRONTEND=noninteractive apt-get install -y dbus-x11 -qq
+fi
+
+export XDG_RUNTIME_DIR="/run/user/`$(id -u)"
 dbus-launch gsettings set org.gnome.desktop.session idle-delay 0
 dbus-launch gsettings set org.gnome.desktop.screensaver lock-enabled false
 
@@ -59,7 +65,7 @@ try {
     Write-Host "Done! GDM3 has been reconfigured and restarted via SSH." -ForegroundColor Green
 }
 catch {
-    Write-Error "SSH Execution failed: $_"
+    Write-Error "SSH Execution failed: `$_"
 }
 finally {
     # Clean up and close the SSH session
