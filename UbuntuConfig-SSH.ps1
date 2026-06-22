@@ -14,7 +14,7 @@ if (-not (Get-Module -ListAvailable Posh-SSH)) {
 }
 
 # --- The Bash Script to Inject ---
-# The `-replace "\`r", ""` at the very end strips out invisible Windows line endings 
+# The `-replace "`r", ""` at the very end strips out invisible Windows line endings 
 # so that the Linux Bash interpreter doesn't throw syntax errors.
 $BashScript = @"
 # 1. Disable Wayland
@@ -55,8 +55,8 @@ try {
     # Open the SSH session using the universal -Force switch
     $Session = New-SSHSession -ComputerName $VMHostOrIP -Credential $GuestCreds -Force
     
-    # Run the sanitized Bash script block
-    $Result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $BashScript
+    # Run the sanitized Bash script block with a 5-minute (300 seconds) timeout
+    $Result = Invoke-SSHCommand -SessionId $Session.SessionId -Command $BashScript -Timeout 300
     
     # Print execution outputs to the console
     if ($Result.Output) { Write-Host $Result.Output -ForegroundColor Gray }
@@ -68,6 +68,6 @@ catch {
     Write-Error "SSH Execution failed: $_"
 }
 finally {
-    # Clean up and close the SSH session
-    if ($Session) { Remove-SSHSession -SessionId $Session.SessionId }
+    # Clean up and close the SSH session silently
+    if ($Session) { Remove-SSHSession -SessionId $Session.SessionId | Out-Null }
 }
